@@ -2,7 +2,8 @@
 # Sarupria Group
 # Clemson University
 
-#Date created:- 
+#Date created: July 1, 2019
+#Last updated: 
 
 import MDAnalysis as mda
 import numpy as np
@@ -48,164 +49,131 @@ def main(args):
 
 
 def obtainTrajectoryData(x_bin_size,y_bin_size):
-	"""
-	This is the function to arrange the coordinates from the input trajectory
+        global coordinates_mbl
+        global size
+        global box
+        global x_n_bins
+        global y_n_bins
+	
+        #Read the full trajectory from the xtc file
+        u=mda.Universe("../test_files/prod-pacxb-npt-whole.gro","../test_files/prod-pacxb-npt-whole.xtc")
+        print(u)
 
-	:type x_bin_size: double
-	:param x_bin_size: Size of bin in X direction
+        #Assign the polyamide atom coordinates 'polyamide' variable
+        pa=u.select_atoms("resname MPD1 MPD2 TMC1 TMC2 TMC3")
+        print(pa)
+        
+        #Assign the methylene blue atom coordinates to 'mbl' variable
+        mbl=u.select_atoms("resname MBL")
+        print("Following are the coordinated for MBL:\n")
+        print(mbl)
+        coordinates_pa=[]
+        coordinates_mbl=[]
+        box=[]
+        cog_pa=[]
+        cog_mbl=[]
 	
-	:type y_bin_size: double
-	:param y_bin_size: Size of bin in Y direction
+        for ts in u.trajectory:
+                coordinates_mbl.append(mbl.positions)
+                coordinates_pa.append(pa.positions)
+                box.append(ts.dimensions[:3])
 	
-	"""
-	global coordinates
-	global size
-	global box
-	global x_n_bins
-	global y_n_bins
-	
-	u=mda.Universe("../test_files/equil-pacxb-nvt-whole.gro","../test_files/equil-pacxb-nvt-whole.xtc")
-	print(u)
-	polyamide=u.select_atoms("resname MPD1 MPD2 TMC1 TMC2 TMC3")
-	print(polyamide)
-	coordinates=[]
-	box=[]
-	
-	for ts in u.trajectory:
-		coordinates.append(polyamide.positions)
-		box.append(ts.dimensions[:3])
-	
-	coordinates=np.array(coordinates)
-	box=np.array(box)
+        coordinates_pa=np.array(coordinates_pa)
+        coordinates_mbl=np.array(coordinates_mbl)
+        box=np.array(box)
     
     	#Since MDAnalysis give output in Angstorm, the units are converted to nm for consistency
 	
-	coordinates=np.divide(coordinates,10.0)
-	box=np.divide(box,10.0)
-	Lx=box[:,0]
-	Ly=box[:,1]
-	Lz=box[:,2]
-	Lx_max=max(Lx)
-	Ly_max=max(Ly)
+        coordinates_pa=np.divide(coordinates_pa,10.0)
+        coordindates_mbl=np.divide(coordinates_mbl,10.0)
+        box=np.divide(box,10.0)
+        Lx=box[:,0]
+        Ly=box[:,1]
+        Lz=box[:,2]
+        Lx_max=max(Lx)
+        Ly_max=max(Ly)
 
-	print(coordinates)
-	#print(box)
-	size=len(coordinates)
-	print("No. of frames%d"%(size))
-	x_n_bins=math.ceil(Lx_max/x_bin_size)
-	y_n_bins=math.ceil(Ly_max/y_bin_size)
+        size=len(coordinates_mbl)
+        print("No. of frames%d"%(size))
+        x_n_bins=math.ceil(Lx_max/x_bin_size)
+        y_n_bins=math.ceil(Ly_max/y_bin_size)
 
 def readFrame(frame):
-
-	global x
-    	global y
-    	global z
-    	global Lx
-    	global Ly
-    	global Lz
-    	global Lx_max
-    	global Ly_max
+        global x
+        global y
+        global z
+        global p_x
+        global p_y
+        global p_z
+        global Lx
+        global Ly
+        global Lz
+        global Lx_max   
+        global Ly_max
+        global cog_x
+        global cog_y
+        global cog_z
     	
 	
 	#Obtaining the x,y and z coordinated from the frame
-	x=coordinates[frame][:,0]
-    	y=coordinates[frame][:,1]
-    	z=coordinates[frame][:,2]
-    	Lx=box[:,0]
-    	Ly=box[:,1]
-    	Lz=box[:,2]
-    
-    	#print(Lx[frame],Ly[frame],Lz[frame])
-	for i in range(0,len(x)):
-        	data=x[i]/Lx[frame]
-        	fd=math.floor(data)
-        	x[i]=x[i]-(fd*Lx[frame])
-	for i in range(0,len(y)):
-        	data=y[i]/Ly[frame]
-        	fd=math.floor(data)
-        	y[i]=y[i]-(fd*Ly[frame])
-    	for i in range(0,len(z)):
-        	data=z[i]/Lz[frame]
-        	fd=math.floor(data)
-        	z[i]=z[i]-(fd*Lz[frame])
-
-    
-    
-
-def getDistbn(frame,x_bin_size,y_bin_size):
-	global max_z
-	global min_z
-	global x_n_bins
-	global y_n_bins
-	readFrame(frame)
-	max_z=np.full((x_n_bins,y_n_bins),-100.0)
-	min_z=np.full((x_n_bins,y_n_bins),100.0)
-	for i in range(0,len(x)):
-		bin_x_ID=math.floor(x[i]/x_bin_size)
-		bin_y_ID=math.floor(y[i]/y_bin_size)
-		max_z[bin_x_ID][bin_y_ID]=max(max_z[bin_x_ID][bin_y_ID],z[i])
-		min_z[bin_x_ID][bin_y_ID]=min(min_z[bin_x_ID][bin_y_ID],z[i])
+        x=coordinates_mbl[frame][:,0]
+        y=coordinates_mbl[frame][:,1]
+        z=coordinates_mbl[frame][:,2]
+        p_x=coordinates_mbl[frame][:,0]
+        p_y=coordinates_mbl[frame][:,1]
+        p_z=coordinates_mbl[frame][:,2]
+ 
+        Lx=box[:,0]
+        Ly=box[:,1]
+        Lz=box[:,2]
         
+        print(Lx[frame],Ly[frame],Lz[frame])
+        for i in range(0,len(x)):
+                #Uncomment next line to print the x-coordinate value before applying the PBC
+                #print(x[i])
+                data=x[i]/Lx[frame]
+                fd=math.floor(data)
+                p_x[i]=x[i]-(fd*Lx[frame])
+        for i in range(0,len(y)):
+                #Uncomment next line to print the y-coordinate value before the applyinf the PBC
+                #print(y[i])
+                data=y[i]/Ly[frame]
+                fd=math.floor(data)
+                p_y[i]=y[i]-(fd*Ly[frame])
+        for i in range(0,len(z)):
+                data=z[i]/Lz[frame]
+                fd=math.floor(data)
+                p_z[i]=z[i]-(fd*Lz[frame])
+        
+        print(y)
+        cog_x=sum(x)/len(x)
+        cog_y=sum(y)/len(y)
+        print(cog_x)
+        print(cog_y)
+    
     
 
 def getTrajectoryDistribution(x_bin_size,y_bin_size,bf,ef):
-	global z_maxvalues
-	global z_maxvalues_avg
-	global z_minvalues
-	global z_minvalues_avg
-	
-	obtainTrajectoryData(x_bin_size,y_bin_size)	
-
-	z_maxvalues=np.full((ef,x_n_bins,y_n_bins),-100.0)
-	z_minvalues=np.full((ef,x_n_bins,y_n_bins),100.0)
-	n_count_max=np.zeros((x_n_bins,y_n_bins))
-	n_count_min=np.zeros((x_n_bins,y_n_bins))
-	z_maxvalues_avg=np.zeros((x_n_bins,y_n_bins))
-	z_minvalues_avg=np.zeros((x_n_bins,y_n_bins))
-	
-	for i in range(bf,ef):
-		getDistbn(i,x_bin_size,y_bin_size)
-		print ("Frame%d\n"%(i))
-		z_maxvalues[i]=max_z
-		z_minvalues[i]=min_z
-		
-	for i in range(bf,ef):
-		for j in range(0,x_n_bins):
-			for k in range(0,y_n_bins):
-				if(j*x_bin_size <=Lx[i] and k*y_bin_size <= Ly[i]):
-					n_count_max[j][k]+=1
-					n_count_min[j][k]+=1
-	print(n_count_max)
-	for i in range(bf,ef):
-		for j in range(0,x_n_bins):
-			for k in range(0,y_n_bins):
-				if z_maxvalues[i][j][k]!=-100:
-					#n_count_max[j][k]+=1
-					z_maxvalues_avg[j][k]+=z_maxvalues[i][j][k]
-				if z_minvalues[i][j][k]!=100:
-					#n_count_min[j][k]+=1
-					z_minvalues_avg[j][k]+=z_minvalues[i][j][k]
-	print(z_maxvalues_avg)
-	for i in range(0,len(z_maxvalues_avg)):
-		for j in range(0,len(z_maxvalues_avg[i])):
-			z_maxvalues_avg[i][j]/=n_count_max[i][j]
-			z_minvalues_avg[i][j]/=n_count_min[i][j]
-	z_maxvalues_stat_w=open('./MaxZValuesStats.xvg',"w")
-	z_minvalues_stat_w=open('./MinZValuesStats.xvg',"w")
-	for i in range(0,len(z_maxvalues_avg)):
-		for j in range(0,len(z_maxvalues_avg[i])):
-			z_maxvalues_stat_w.write('%8.3f\t%8.3f\t%8.3f\n'%(i*x_bin_size+x_bin_size/2,j*y_bin_size+y_bin_size/2,z_maxvalues_avg[i][j]))
-			z_minvalues_stat_w.write('%8.3f\t%8.3f\t%8.3f\n'%(i+x_bin_size/2,j+y_bin_size/2,z_minvalues_avg[i][j]))
-		if(i!=len(z_maxvalues_avg)-1):
-			z_maxvalues_stat_w.write("\n")
-			z_minvalues_stat_w.write("\n")
+        
+        global coglist	
+        obtainTrajectoryData(x_bin_size,y_bin_size)	
+        coglist=np.full((ef,2),-100.0)
+        
+        for i in range(bf,ef):
+            readFrame(i)
+            print ("Frame%d\n"%(i))
+            coglist[i][0]=cog_x
+            coglist[i][1]=cog_y
+        
+        coglist_w=open('./cog_list.xvg',"w")
+        for i in range(bf,ef):
+            coglist_w.write('%d\t%8.3f\t%8.3f\n'%(i,coglist[i][0],coglist[i][1]))
             
             
-if __name__=='__main__':
-	"""
-	Main function comment
-	""" 
-	args = create_parser().parse_args()
-	main(args)
+#if __name__=='__main__':
+#	args = create_parser().parse_args()
+#	main(args)
     
-#getTrajectoryDistribution(0.1,0.1,10,200)
+#obtainTrajectoryData(0.1,0.1)
+#readFrame(1)
+getTrajectoryDistribution(0.1,0.1,1,100)

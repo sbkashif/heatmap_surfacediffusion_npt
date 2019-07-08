@@ -61,7 +61,7 @@ def obtainTrajectoryData(x_bin_size,y_bin_size):
         global Lz
 	
         #Read the full trajectory from the xtc file
-        u=mda.Universe("./last10ns.gro","./last10ns.xtc")
+        u=mda.Universe("../test_files/last10ns.gro","../test_files/last10ns.xtc")
         print(u)
 
         #Assign the polyamide atom coordinates 'pa' variable
@@ -129,7 +129,7 @@ def obtainTrajectoryData(x_bin_size,y_bin_size):
     
         return coordinates_pa, coordinates_mbl, box
 
-def readFrame(frame, group_coordinates):
+def readFrame(frame, input_group_coordinates):
         global x
         global y
         global z
@@ -145,9 +145,10 @@ def readFrame(frame, group_coordinates):
 	
 	    #Obtaining the x,y and z coordinates for the given frame
         #The coordiates are extracted to treat raw or with PBC
-        x=group_coordinates[frame][:,0]
-        y=group_coordinates[frame][:,1]
-        z=group_coordinates[frame][:,2]
+        group_coordinates=input_group_coordinates.copy()
+        x=input_group_coordinates[frame][:,0]
+        y=input_group_coordinates[frame][:,1]
+        z=input_group_coordinates[frame][:,2]
         p_x=group_coordinates[frame][:,0]
         p_y=group_coordinates[frame][:,1]
         p_z=group_coordinates[frame][:,2]
@@ -179,10 +180,9 @@ def readFrame(frame, group_coordinates):
                 fd=math.floor(data)
                 p_z[i]=p_z[i]-(fd*Lz[frame])
        
-        print(x) 
-        print(y) 
-        print("Sum of y:", sum(y))
-        print("Length of y:",len(y))
+        print("readFrame X coordinates read after pbc operation:\n",x)
+        print("readFrame Y coordinates read after pbc operation:\n",y)
+
         #COG calculated for the raw trajectory
         cog_x=sum(x)/len(x)
         cog_y=sum(y)/len(y)

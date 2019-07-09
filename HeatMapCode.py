@@ -192,8 +192,8 @@ def getTrajectoryDistribution(x_bin_size,y_bin_size,bf,ef):
             #Calculating the MBL cog for frame i
             logfile.write("\nCalculating COG for MBL for frame corresponding to extracted trajectory timestep:%s\n"%(i))
             cog_x, cog_y = calculateFrameCOG(i,coordinates_mbl)
-            coglist_mbl[i][0]=cog_x
-            coglist_mbl[i][1]=cog_y
+            coglist_mbl[i+bf][0]=cog_x
+            coglist_mbl[i+bf][1]=cog_y
         #Determining and appending the bin frequency
             bin_x_ID=math.floor(cog_x/x_bin_size)
             bin_y_ID=math.floor(cog_y/y_bin_size)
@@ -202,8 +202,8 @@ def getTrajectoryDistribution(x_bin_size,y_bin_size,bf,ef):
         #Calculating the PA cog for frame i
             logfile.write("\nCalculating COG for PA for frame corresponding to extracted trajectory timestep:%s\n"%(i))
             cog_x,cog_y = calculateFrameCOG(i,coordinates_pa)
-            coglist_pa[i][0]=cog_x
-            coglist_pa[i][1]=cog_y
+            coglist_pa[i+bf][0]=cog_x
+            coglist_pa[i+bf][1]=cog_y
             bin_x_ID=math.floor(cog_x/x_bin_size)
             bin_y_ID=math.floor(cog_y/y_bin_size)
             freq_cog_pa[bin_x_ID][bin_y_ID]+=1
@@ -235,4 +235,4 @@ def getTrajectoryDistribution(x_bin_size,y_bin_size,bf,ef):
     
 #obtainTrajectoryData(0.1,0.1)
 #readFrame(1)
-getTrajectoryDistribution(0.3,0.3,2000,2001)
+getTrajectoryDistribution(0.3,0.3,1,100)

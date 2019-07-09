@@ -62,7 +62,8 @@ def obtainTrajectoryData(x_bin_size,y_bin_size,bf,ef):
 
         logfile=open("output.log","w")	
         #Read the full trajectory from the xtc file
-        u=mda.Universe("../test_files/last10ns.gro","../test_files/last10ns.xtc")
+        #u=mda.Universe("../test_files/last10ns.gro","../test_files/last10ns.xtc")
+        u=mda.Universe("../test_files/prod-pacxb-npt-whole.gro","../test_files/prod-pacxb-npt-whole.xtc")
         print(u)
 
         #Assign the polyamide atom coordinates 'pa' variable
@@ -78,12 +79,16 @@ def obtainTrajectoryData(x_bin_size,y_bin_size,bf,ef):
 
         bf=int(bf-1)
         ef=int(ef)
+        print(u.trajectory)
+        
 	
         for ts in u.trajectory[bf:ef]:
-                #logfile.write("\nReading timestep:%s\n"%(ts))
+                print(ts)
+                logfile.write("\nReading timestep:%s\n"%(ts))
                 coordinates_mbl.append(mbl.positions)
                 coordinates_pa.append(pa.positions)
                 box.append(ts.dimensions[:3])
+        
         coordinates_pa=np.array(coordinates_pa)
         coordinates_mbl=np.array(coordinates_mbl)
 
@@ -235,4 +240,4 @@ def getTrajectoryDistribution(x_bin_size,y_bin_size,bf,ef):
     
 #obtainTrajectoryData(0.1,0.1)
 #readFrame(1)
-getTrajectoryDistribution(0.3,0.3,1,100)
+getTrajectoryDistribution(0.3,0.3,19999,20001)

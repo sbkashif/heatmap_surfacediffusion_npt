@@ -48,10 +48,9 @@ def main(args):
 	getTrajectoryDistribution(binx,biny,bf,ef)
 
 
-def obtainTrajectoryData(x_bin_size,y_bin_size):
+def obtainTrajectoryData(x_bin_size,y_bin_size,bf,ef):
         global coordinates_pa
         global coordinates_mbl
-        global mbl
         global size
         global box
         global x_n_bins
@@ -59,60 +58,46 @@ def obtainTrajectoryData(x_bin_size,y_bin_size):
         global Lx
         global Ly
         global Lz
-	
+        global logfile
+
+        logfile=open("output.log","w")	
         #Read the full trajectory from the xtc file
         u=mda.Universe("../test_files/last10ns.gro","../test_files/last10ns.xtc")
         print(u)
 
         #Assign the polyamide atom coordinates 'pa' variable
         pa=u.select_atoms("resname MPD1 MPD2 TMC1 TMC2 TMC3")
-        print(pa)
+        logfile.write("\nRead input trajectory Polyamdie coordinates:\n%s"%(pa))
         
         #Assign the methylene blue atom coordinates to 'mbl' variable
         mbl=u.select_atoms("resname MBL")
-        print("Following are the coordinates for MBL:\n")
-        print(mbl)
-        coordinates_pa=[]
+        logfile.write("\nRead input trajectory Methylene Blue coordinates:\n%s"%(mbl))
         coordinates_mbl=[]
+        coordinates_pa=[]
         box=[]
-        cog_pa=[]
-        cog_mbl=[]
-        cog=[]
-        coordinates_outside_atom=[]
-        coordinates_inside_atom=[]
-        outside_atom=u.select_atoms("name N3")
-        inside_atom=u.select_atoms("name N1")
+
+        bf=int(bf-1)
+        ef=int(ef)
 	
-        for ts in u.trajectory[0:3]:
+        for ts in u.trajectory[bf:ef]:
+                #logfile.write("\nReading timestep:%s\n"%(ts))
                 coordinates_mbl.append(mbl.positions)
                 coordinates_pa.append(pa.positions)
                 box.append(ts.dimensions[:3])
-                cog.append(mbl.center_of_geometry())
-                coordinates_outside_atom.append(outside_atom.positions)
-                coordinates_inside_atom.append(inside_atom.positions)
-        
         coordinates_pa=np.array(coordinates_pa)
         coordinates_mbl=np.array(coordinates_mbl)
-        coordinates_outside_atom=np.array(coordinates_outside_atom)
-        coordinates_inside_atom=np.array(coordinates_inside_atom)
+
         box=np.array(box)
-        cog=np.array(cog)
-    	#Since MDAnalysis give output in Angstorm, the units are converted to nm for consistency
-	
-        #coordinates_pa=np.divide(coordinates_pa,10.0)
-        #coordindates_mbl=np.divide(coordinates_mbl,10.0)
-        #cog=np.divide(cog,10.0)
-        #box=np.divide(box,10.0)
+    	
+        #Since MDAnalysis give output in Angstorm, the units are converted to nm for consistency
+        coordinates_pa=np.divide(coordinates_pa,10.0)
         
+        coordinates_mbl=np.divide(coordinates_mbl,10.0)
+        
+        box=np.divide(box,10.0)
        
-        print("COG from MD analysis:\n")
-        print(cog)         
-        for i in range(0,len(coordinates_mbl)):
-            print("Frame:",i)
-            print("Coordinates:\n")
-            print("Outside atom:",coordinates_outside_atom[i])
-            print("Inside atom:",coordinates_inside_atom[i])
-            print("COG from my calculation",readFrame(i,coordinates_mbl))
+        #print("COG from MD analysis:\n")
+        #print(cog)         
 
         #Extracting the box size thorughout the trajectory
         Lx=box[:,0]
@@ -121,27 +106,16 @@ def obtainTrajectoryData(x_bin_size,y_bin_size):
         Lx_max=max(Lx)
         Ly_max=max(Ly)
 
-        size=len(coordinates_pa)
-        print("No. of frames:%d"%(size))
+        size=len(coordinates_mbl)
+        print("\nNumber of frames read:%s\n"%(size))
+        logfile.write("\nNumber of frames read:%s\n"%(size))
         #The use of this part is in heatmap and it will be revoked later
-        #x_n_bins=math.ceil(Lx_max/x_bin_size)
-        #y_n_bins=math.ceil(Ly_max/y_bin_size)
+        x_n_bins=math.ceil(Lx_max/x_bin_size)
+        y_n_bins=math.ceil(Ly_max/y_bin_size)
     
         return coordinates_pa, coordinates_mbl, box
 
-def readFrame(frame, input_group_coordinates):
-        global x
-        global y
-        global z
-        global p_x
-        global p_y
-        global p_z
-        global Lx
-        global Ly
-        global Lz
-        global Lx_max   
-        global Ly_max
-   	
+def calculateFrameCOG(frame, input_group_coordinates):
 	
 	    #Obtaining the x,y and z coordinates for the given frame
         #The coordiates are extracted to treat raw or with PBC
@@ -153,11 +127,11 @@ def readFrame(frame, input_group_coordinates):
         p_y=group_coordinates[frame][:,1]
         p_z=group_coordinates[frame][:,2]
  
-        print("readFrame X coordinates read:\n",x)
-        print("readFrame Y coordinates read:\n",y)
-        Lx=box[:,0]
-        Ly=box[:,1]
-        Lz=box[:,2]
+        #print("readFrame X coordinates read:\n",x)
+        #print("readFrame Y coordinates read:\n",y)
+        #Lx=box[:,0]
+        #Ly=box[:,1]
+        #Lz=box[:,2]
         
         #print("Box dimension of frame: %s\t is %s,%s,%s"%(frame,Lx[frame],Ly[frame],Lz[frame]))
         
@@ -180,47 +154,85 @@ def readFrame(frame, input_group_coordinates):
                 fd=math.floor(data)
                 p_z[i]=p_z[i]-(fd*Lz[frame])
        
-        print("readFrame X coordinates read after pbc operation:\n",x)
-        print("readFrame Y coordinates read after pbc operation:\n",y)
+        if(frame==0 or (frame+1)%10==0 or (frame+1)==size):
+            logfile.write("\ncalculateFrameCOG function X coordinates read:\n%s"%(x))
+            logfile.write("\ncalculateFrameCOG function Y coordinates read:\n%s"%(y))
 
         #COG calculated for the raw trajectory
         cog_x=sum(x)/len(x)
         cog_y=sum(y)/len(y)
-        #print("COG of frame:%s\t is %s\t%s:" %(frame,cog_x,cog_y))
+        
+        #COG converted to PBC
+        data_x=cog_x/Lx[frame]
+        fd=math.floor(data_x)
+        cog_x=cog_x-(fd*Lx[frame])
+
+        data_y=cog_y/Ly[frame]
+        fd=math.floor(data_y)
+        cog_y=cog_y-(fd*Ly[frame])
+
         return cog_x, cog_y
     
     
 
 def getTrajectoryDistribution(x_bin_size,y_bin_size,bf,ef):
         
-        global coglist_pa
-        global coglist_mbl	
-        obtainTrajectoryData(x_bin_size,y_bin_size)	
+        #global coglist_pa
+        #global coglist_mbl	
+        obtainTrajectoryData(x_bin_size,y_bin_size,bf,ef)	
         coglist_pa=np.full((ef,2),-100.0)
         coglist_mbl=np.full((ef,2),-100.0)
-       
-         
+        freq_cog_pa=np.full((x_n_bins,y_n_bins),0)
+        freq_cog_mbl=np.full((x_n_bins,y_n_bins),0)
+        bf=bf-1
+        
         for i in range(bf,ef):
-            print ("Looping in Frame:%d\n"%(i))
-        #Calculating the MBL cog for frame i
-            cog_x, cog_y = readFrame(i,coordinates_mbl)
+            i=i-bf
+            print ("Looping in frame corresponding to extracted trajectory timestep:%d\n"%(i))
+            #Calculating the MBL cog for frame i
+            logfile.write("\nCalculating COG for MBL for frame corresponding to extracted trajectory timestep:%s\n"%(i))
+            cog_x, cog_y = calculateFrameCOG(i,coordinates_mbl)
             coglist_mbl[i][0]=cog_x
             coglist_mbl[i][1]=cog_y
+        #Determining and appending the bin frequency
+            bin_x_ID=math.floor(cog_x/x_bin_size)
+            bin_y_ID=math.floor(cog_y/y_bin_size)
+            freq_cog_mbl[bin_x_ID][bin_y_ID]+=1
+	   
         #Calculating the PA cog for frame i
-            readFrame(i,coordinates_pa)
+            logfile.write("\nCalculating COG for PA for frame corresponding to extracted trajectory timestep:%s\n"%(i))
+            cog_x,cog_y = calculateFrameCOG(i,coordinates_pa)
             coglist_pa[i][0]=cog_x
             coglist_pa[i][1]=cog_y
+            bin_x_ID=math.floor(cog_x/x_bin_size)
+            bin_y_ID=math.floor(cog_y/y_bin_size)
+            freq_cog_pa[bin_x_ID][bin_y_ID]+=1
+	   
+ 
+
+        coglist_w=open('./cog_list_allComp.xvg',"w")
+        coglist_w.write('#Frame\tMBL X\tMBL Y\tPA X\tPA Y\n')
+        freq_mbl_w=open('./freq_list_MBL.xvg',"w")
+        freq_pa_w=open('./freq_list_PA.xvg',"w")
         
-        coglist_mbl_w=open('./cog_list_allComp.xvg',"w")
-        coglist_mbl_w.write('Frame\tMBL X\tMBL Y\tPA X\tPA Y\n')
         for i in range(bf,ef):
-            coglist_mbl_w.write('%d\t%8.3f\t%8.3f\t%8.3f\t%8.3f\n'%(i,coglist_mbl[i][0],coglist_mbl[i][1],coglist_pa[i][0],coglist_pa[i][1]))
-            
-            
+            coglist_w.write('%d\t%8.3f\t%8.3f\t%8.3f\t%8.3f\n'%((int)(i+1),coglist_mbl[i][0],coglist_mbl[i][1],coglist_pa[i][0],coglist_pa[i][1]))
+        
+        for j in range(0,x_n_bins):
+            for k in range(0,y_n_bins):
+            #if(j*x_bin_size <=Lx[i] and k*y_bin_size <= Ly[i]):
+                n_freq_mbl=freq_cog_mbl[j][k]/size
+                n_freq_pa=freq_cog_pa[j][k]/size
+                freq_mbl_w.write('%8.3f\t%8.3f\t%8.3f\t%8.3f\n'%(j*x_bin_size+x_bin_size/2,k*y_bin_size+y_bin_size/2,freq_cog_mbl[j][k],n_freq_mbl))
+                freq_pa_w.write('%8.3f\t%8.3f\t%8.3f\t%8.3f\n'%(j*x_bin_size+x_bin_size/2,k*y_bin_size+y_bin_size/2,freq_cog_pa[j][k],n_freq_pa))
+            freq_pa_w.write("\n") 
+            freq_mbl_w.write("\n")
+                    
+	   
 #if __name__=='__main__':
 #	args = create_parser().parse_args()
 #	main(args)
     
-obtainTrajectoryData(0.1,0.1)
+#obtainTrajectoryData(0.1,0.1)
 #readFrame(1)
-#getTrajectoryDistribution(0.1,0.1,1,100)
+getTrajectoryDistribution(0.3,0.3,2000,2001)
